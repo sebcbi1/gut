@@ -1,0 +1,8 @@
+#!/usr/bin/env php
+<?php
+require realpath(__DIR__ . '/vendor/autoload.php');
+
+//(new Gut\Gut())->parseCommandLineOptions();
+$gut = new Gut\Gut();
+$gut->init();
+$gut->parseCommandLineOptions();
