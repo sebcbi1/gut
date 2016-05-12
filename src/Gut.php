@@ -105,20 +105,21 @@ class Gut
         $this->term->yellow()->inline(self::VERSION);
         $this->term->br()->br();
         $this->term->yellow('Usage:');
-        $this->term->out(' gut [command] [options]');
+        $this->term->out(' gut [location] [command] [<option>]');
+        $this->term->br();
+        $this->term->yellow('Location:');
+        $this->term->out(' (optional) Location to upload to. (default: all).');
         $this->term->br();
         $this->term->yellow('Available commands:');
         $padding = $this->term->padding(10, ' ');
 
-        $padding->label(' rollback')->result('Rollback to specified revision or previous revision if none specified.');
-        $padding->label(' init')->result('Initialize to specified revision or current revision if none specified.');
+        $padding->label(' commit')->result('(default) Upload revision. Option: [<commit>|rollback] (default: HEAD).');
+        $padding->label(' init')->result('Initialize location to specified revision. Option: [<commit>] (default: HEAD).');
         $padding->label(' dirty')->result('Upload not commited files.');
         $padding->label(' clean')->result('Restore files uploaded with \'dirty\' to their clean repository state.');
-        $padding->label(' folder')->result('Upload specified folder.');
+        $padding->label(' folder')->result('Upload specified folder. Option: <folder>');
         $padding->label(' help')->result('Show this help message.');
-        $this->term->br();
-        $this->term->out('defaults to upload last revision if no command specified.');
-        $this->term->br();
+        $this->term->br();  
     }
 
     public function uploadLastCommit()

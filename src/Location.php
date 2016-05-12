@@ -21,6 +21,7 @@ class Location
     {
         $this->filesystem = new Filesystem($adapter);
         $this->revisionFile = $revisionFile;
+        $this->git = new Git();
     }
 
     /**
@@ -41,6 +42,13 @@ class Location
     {
         $this->filesystem->write($this->revisionFile, $revision);
         $this->revision = $revision;
+    }
+
+    public function getModifiedFiles()
+    {
+        $lastCommit = $this->git->getLastCommit();
+        $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $lastCommit);
+        return $diff;
     }
 
 
