@@ -7,9 +7,9 @@ use League\Flysystem\Memory\MemoryAdapter;
 
 class AdapterFactory
 {
-    public static function create($location)
+    public static function create($adapter)
     {
-        switch($location['adapter']) {
+        switch($adapter) {
             case 'memory':
                 return new MemoryAdapter();
                 break;

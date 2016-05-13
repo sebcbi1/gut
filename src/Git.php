@@ -29,6 +29,7 @@ class Git
     {
         return $this->exec('log --format="%H"');
     }
+    
     /**
      * Git Status Codes
      *
@@ -45,15 +46,19 @@ class Git
     {
         $lines = $this->exec("diff --name-status $revision $lastCommit");
         $return = [
-            'filesToUpload' => [],
-            'filesToDelete' => [],
+            'added' => [],
+            'modified' => [],
+            'deleted' => [],
         ];
+        
         foreach ($lines as $line) {
             list($status, $fileName) = preg_split('/\s+/', $line, 2);
-            if (in_array($status, ['A', 'C', 'M', 'T'])) {
-                $return['filesToUpload'][] = $fileName;
+            if (in_array($status, ['A'])) {
+                $return['added'][] = $fileName;
+            } elseif (in_array($status, ['C', 'M', 'T'])) {
+                $return['modified'][] = $fileName;
             } elseif ($status == 'D') {
-                $return['filesToDelete'][] = $fileName;
+                $return['deleted'][] = $fileName;
             } else {
                 throw new Exception("Unsupported git-diff status: {$status}");
             }

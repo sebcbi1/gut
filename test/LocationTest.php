@@ -1,32 +1,78 @@
 <?php
 
-use Gut\Gut;
+use Gut\AdapterFactory;
+use Gut\Location;
 
 class LocationTest extends \PHPUnit_Framework_TestCase
 {
-    private $gut;
+    private $repoPath;
+
     public function setUp()
     {
-        $config = [
-            'locations' => [
-                'test' => [
-                    'adapter' => 'memory'
-                ]
-            ]
-        ];
-        $this->gut = new Gut($config);
+        $this->repoPath = sys_get_temp_dir() . '/gutTestRepo';
+        mkdir($this->repoPath);
+        chdir($this->repoPath);
+        // init repo
+        exec('git init');
+        // add a file
+        exec('touch test.php; git add .; git commit -m "add test"');
+
+        $this->location = new Location(AdapterFactory::create('memory'), '.revision', $this->repoPath );
+        $this->git = new \Gut\Git($this->repoPath);
+
+    }
+
+    public function tearDown()
+    {
+        exec("rm -Rf {$this->repoPath}");
+    }
+    
+    public function testGetRevision()
+    {
+        $this->setExpectedException('League\Flysystem\FileNotFoundException');
+        $this->assertEmpty($this->location->getRevision());
     }
 
     public function testSetRevision()
     {
-        $this->gut->init('test');
-        $this->assertEquals('test', $this->gut->getLocation('test')->getRevision());
+        $this->location->setRevision('fakeRevision');
+        $this->assertEquals('fakeRevision', $this->location->getRevision());
     }
 
-    public function testModifiedFiles()
+    public function testGetModifiedFiles() 
     {
-//        $this->gut->init('test');
-        $this->gut->init('8b427d2d9985ba7cb0869ea3ad4fc0104702c6ff');
-        $this->gut->getLocation('test')->getModifiedFiles();
+        $this->location->setRevision($this->git->getLastCommit());
+        exec('echo blablabla > test.php; git add .; git commit -m "modified test"');
+
+        $diff = $this->sort($this->location->getModifiedFiles());
+        $expected = [
+            'added' => [],
+            'modified' => ["test.php"],
+            'deleted' => [],
+        ];
+        $this->assertEquals($diff, $expected);
     }
+
+    public function testUploadRevision()
+    {
+        $oldCommit = $this->git->getLastCommit();
+        $this->location->setRevision($oldCommit);
+        exec('echo blablabla > test.php; git add .; git commit -m "modified test"');
+
+        $newCommit = $this->git->getLastCommit();
+        $this->location->uploadRevision();
+        $fs = $this->location->getFileSystem();
+        $this->assertTrue($fs->has('remote://test.php'));
+        $this->assertEquals($newCommit, $fs->read('remote://.revision'));
+    }
+
+    
+    private function sort($array)
+    {
+        foreach (['added', 'modified', 'deleted'] as $k) {
+            sort($array[$k]);
+        }
+        return $array;
+    }
+
 }

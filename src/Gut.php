@@ -18,11 +18,9 @@ class Gut
 
     private $locations = [];
 
-
     public function __construct($config = self::CONFIG_FILENAME)
     {
         $this->term = new CLImate();
-        $this->git = new Git();
         $this->configure($config);
     }
 
@@ -40,7 +38,7 @@ class Gut
         }
 
         foreach ($this->config['locations'] as $locationName => $location) {
-            $adapter = AdapterFactory::create($location);
+            $adapter = AdapterFactory::create($location['adapter']);
             if ($adapter) {
                 $this->locations[$locationName] = new Location($adapter, $this->config['revision_file']);
             }
