@@ -17,7 +17,7 @@ class LocationTest extends \PHPUnit_Framework_TestCase
         // add a file
         exec('touch test.php; git add .; git commit -m "add test"');
 
-        $this->location = new Location(AdapterFactory::create('memory'), '.revision', $this->repoPath );
+        $this->location = new Location(AdapterFactory::create(['type' =>'memory']), '.revision', $this->repoPath );
         $this->git = new \Gut\Git($this->repoPath);
 
     }
@@ -55,15 +55,21 @@ class LocationTest extends \PHPUnit_Framework_TestCase
 
     public function testUploadRevision()
     {
+        $fs = $this->location->getFileSystem();
+
         $oldCommit = $this->git->getLastCommit();
         $this->location->setRevision($oldCommit);
         exec('echo blablabla > test.php; git add .; git commit -m "modified test"');
 
         $newCommit = $this->git->getLastCommit();
         $this->location->uploadRevision();
-        $fs = $this->location->getFileSystem();
         $this->assertTrue($fs->has('remote://test.php'));
         $this->assertEquals($newCommit, $fs->read('remote://.revision'));
+
+        exec('rm test.php; touch test3.php; git add .; git commit -m "modified test"');
+        $this->location->uploadRevision();
+        $this->assertTrue($fs->has('remote://test3.php'));
+        $this->assertFalse($fs->has('remote://test.php'));
     }
 
     

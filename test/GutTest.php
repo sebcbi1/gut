@@ -11,7 +11,7 @@ class GutTest extends \PHPUnit_Framework_TestCase
         $config = [
             'locations' => [
                 'test' => [
-                    'adapter' => 'memory'
+                    'type' => 'memory'
                 ]
             ]
         ];

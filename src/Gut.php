@@ -2,14 +2,14 @@
 
 namespace Gut;
 
+use Exception;
 use League\CLImate\CLImate;
-use League\Flysystem\FileNotFoundException;
 use Symfony\Component\Yaml\Yaml;
 
 class Gut
 {
     const VERSION = '0.9.0';
-    const CONFIG_FILENAME = './gut.yml';
+    const CONFIG_FILENAME = '.gut.yml';
     const REVISION_FILE = '.revision';
 
     private $config = [
@@ -26,10 +26,15 @@ class Gut
 
     private function configure($config)
     {
-        if (is_string($config) && is_file($config)) {
-            $config = Yaml::parse(file_get_contents($config));
+        if (is_string($config)) {
+            if (is_file($config)) {
+                $config = Yaml::parse(file_get_contents($config));
+            } else {
+                $this->term->error(self::CONFIG_FILENAME . ' is missing.');
+                die(-1);
+            }
         }
-        $this->config = array_merge($this->config, $config);
+        $this->config = array_merge($this->config, ($config ?? []));
         $this->config['revision_file_dirty'] = $this->config['revision_file'] . '-dirty';
 
         if (empty($this->config['locations'])) {
@@ -38,9 +43,11 @@ class Gut
         }
 
         foreach ($this->config['locations'] as $locationName => $location) {
-            $adapter = AdapterFactory::create($location['adapter']);
-            if ($adapter) {
-                $this->locations[$locationName] = new Location($adapter, $this->config['revision_file']);
+            try {
+                $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config['revision_file']);
+            } catch (Exception $e) {
+                $this->term->error($locationName . ': '. $e->getMessage());
+                die(-1);
             }
         }
 
@@ -124,24 +131,23 @@ class Gut
     {
         foreach ($this->locations as $locationName => $location) {
             try {
-                $revision = $location->getRevision();
-            } catch (FileNotFoundException $e) {
-                $this->term->error("$locationName: Revision file ({$this->config['revision_file']}) not found.");
+                $location->uploadRevision();
+            } catch (Exception $e) {
+                $this->term->error("$locationName: upload error");
                 continue;
             }
-            var_dump($revision);
         }
     }
 
-    public function init(string $revision = '')
+    public function init(string $revision = null)
     {
-        if (empty($revision)) {
-            // get last commit
-        } else {
-            // check commit exist
-        }
         foreach ($this->locations as $locationName => $location) {
-            $location->setRevision($revision);
+            try {
+                $location->setRevision($revision);
+            } catch (Exception $e) {
+                $this->term->error("$locationName: init error");
+                continue;
+            }
         }
     }
 

@@ -48,10 +48,12 @@ class Location
     }
 
     /**
-     * @param string $revision
+     * @param string|null $revision
      */
-    public function setRevision(string $revision)
+    public function setRevision(string $revision = null)
     {
+        $revision = $revision ?? $this->git->getLastCommit();
+
         $revFile = 'remote://' . $this->revisionFile;
         if ($this->filesystem->has($revFile)) {
             $this->filesystem->update($revFile, $revision);
@@ -62,16 +64,21 @@ class Location
     }
 
     /**
+     * @param string|null $revision
      * @return array
+     * @throws Exception
      */
-    public function getModifiedFiles($revision = null):array
+    public function getModifiedFiles(string $revision = null):array
     {
         $revision = $revision ?? $this->git->getLastCommit();
         $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $revision);
         return $diff;
     }
 
-    public function uploadRevision($revision = null)
+    /**
+     * @param string|null $revision
+     */
+    public function uploadRevision(string $revision = null)
     {
         $revision = $revision ?? $this->git->getLastCommit();
         $diff = $this->getModifiedFiles($revision);

@@ -1,4 +1,4 @@
 /.idea
 /vendor
 .php-version
-gut.yml
+.gut.yml

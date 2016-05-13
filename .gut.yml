@@ -1,0 +1,4 @@
+locations:
+  production:
+    type: local
+    path: ../guttest
