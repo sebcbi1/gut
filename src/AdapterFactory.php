@@ -17,7 +17,7 @@ class AdapterFactory
                 return new MemoryAdapter();
                 break;
             case 'local':
-                if (false === realpath($adapter['path'])) {
+                if (false === realpath($adapter['path'])) { 
                     throw new Exception('Directory ' . $adapter['path'] .' doesn\'t exists.');
                 }
                 return new Local(realpath($adapter['path']));
