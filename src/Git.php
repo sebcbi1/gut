@@ -13,10 +13,10 @@ class Git
         }
     }
 
-    private function exec(string $command):array
+    public function exec(string $command, &$returnCode = 0):array
     {
         $command = "git -C {$this->path} $command";
-        exec($command, $output);
+        exec($command, $output, $returnCode);
         return $output;
     }
 
@@ -44,6 +44,10 @@ class Git
      */
     public function getModifiedFilesBetweenRevisions(string $revision, string $lastCommit):array
     {
+        if (!$this->checkIfCommitExistsInLog($revision)) {
+            throw new Exception("Unknown revision $revision. Try merging remote branch locally.");
+        }
+
         $lines = $this->exec("diff --name-status $revision $lastCommit");
         $return = [
             'added' => [],
@@ -64,6 +68,12 @@ class Git
             }
         }
         return $return;
+    }
+
+    public function checkIfCommitExistsInLog($revision)
+    {
+        $this->exec("show -s $revision >/dev/null 2>&1", $returnCode);
+        return $returnCode == 0;
     }
 
 }

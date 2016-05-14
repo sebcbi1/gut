@@ -16,6 +16,9 @@ class Gut
         'revision_file' => self::REVISION_FILE,
     ];
 
+    /**
+     * @var Location[]
+     */
     private $locations = [];
 
     public function __construct($config = self::CONFIG_FILENAME)
@@ -131,9 +134,14 @@ class Gut
     {
         foreach ($this->locations as $locationName => $location) {
             try {
-                $location->uploadRevision();
+
+                $files = $location->getModifiedFiles();
+                if (empty($files['added']) && empty($files['modified']) && empty($files['deleted'])) {
+                    $this->term->out("$locationName: nothing to do.");
+                }
+//                $location->uploadRevision();
             } catch (Exception $e) {
-                $this->term->error("$locationName: upload error");
+                $this->term->error("$locationName: error - " . $e->getMessage());
                 continue;
             }
         }

@@ -3,5 +3,4 @@
 require realpath(__DIR__ . '/vendor/autoload.php');
 
 $gut = new Gut\Gut();
-$gut->init();
 $gut->parseCommandLineOptions();

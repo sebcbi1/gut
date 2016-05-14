@@ -42,7 +42,7 @@ class Location
     public function getRevision():string
     {
         if (empty($this->revision)) {
-            $this->revision = $this->filesystem->read('remote://' . $this->revisionFile);
+            $this->revision = trim($this->filesystem->read('remote://' . $this->revisionFile));
         }
         return $this->revision;
     }
@@ -84,15 +84,25 @@ class Location
         $diff = $this->getModifiedFiles($revision);
 
         foreach ($diff['added'] as $file) {
-            $this->filesystem->copy('local://' . $file, 'remote://' . $file);
+            $this->uploadFile('local://' . $file, 'remote://' . $file);
         }
         foreach ($diff['modified'] as $file) {
-            $this->filesystem->copy('local://' . $file, 'remote://' . $file);
+            $this->uploadFile('local://' . $file, 'remote://' . $file);
         }
         foreach ($diff['deleted'] as $file) {
             $this->filesystem->delete('remote://' . $file);
         }
         $this->setRevision($revision);
+    }
+
+    private function uploadFile($local, $remote)
+    {
+        if ($this->filesystem->has($remote)) {
+            $content = $this->filesystem->read($local);
+            $this->filesystem->update($remote, $content);
+        } else {
+            $this->filesystem->copy($local, $remote);
+        }
     }
 
 }
