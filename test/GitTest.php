@@ -31,10 +31,11 @@ class GitTest extends \PHPUnit_Framework_TestCase
         return $array;
     }
 
-    public function testCheckIfCommitExistsInLog()
+    public function testRevParse()
     {
-        $this->assertTrue($this->git->checkIfCommitExistsInLog($this->git->getLastCommit()));
-        $this->assertFalse($this->git->checkIfCommitExistsInLog('blablabla'));
+        $this->assertNotEmpty($this->git->revParse($this->git->getLastCommit()));
+        $this->setExpectedException('Gut\Exception');
+        $this->git->revParse('blablabla');
     }
 
     public function testGetLastCommit()

@@ -2,7 +2,6 @@
 
 namespace Gut;
 
-use Exception;
 use League\CLImate\CLImate;
 use Symfony\Component\Yaml\Yaml;
 
@@ -24,6 +23,7 @@ class Gut
     public function __construct($config = self::CONFIG_FILENAME)
     {
         $this->term = new CLImate();
+        $this->term->extend('Gut\Cli\ReplaceableText');
         $this->configure($config);
     }
 
@@ -66,7 +66,7 @@ class Gut
         } else {
             $command = $options[0];
             if (in_array($command, ['rollback', 'folder', 'init', 'dirty', 'clean', 'help'])) {
-                $arg = '';
+                $arg = null;
                 if (count($options) > 1) {
                     $arg = $options[1];
                 }
@@ -77,13 +77,14 @@ class Gut
         }
         switch ($command) {
             case '':
-                $this->uploadLastCommit();
+                $this->uploadCommit('HEAD');
                 break;
             case 'init':
                 $this->init($arg);
                 break;
             case 'rollback':
-                $this->rollback($arg);
+                $rev = $arg ?? 'HEAD^';
+                $this->uploadCommit($rev);
                 break;
             case 'folder':
                 $this->uploadFolder($arg);
@@ -130,16 +131,50 @@ class Gut
         $this->term->br();  
     }
 
-    public function uploadLastCommit()
+    public function uploadCommit($rev)
     {
         foreach ($this->locations as $locationName => $location) {
             try {
 
-                $files = $location->getModifiedFiles();
+                $files = $location->getModifiedFiles($rev);
                 if (empty($files['added']) && empty($files['modified']) && empty($files['deleted'])) {
-                    $this->term->out("$locationName: nothing to do.");
+                    $this->term->out("\n$locationName: no files to upload.\n");
+                } else {
+                    $this->term->out("\n$locationName - files to be uploaded/deleted :\n");
+
+                    if (!empty($files['added'])) {
+                        foreach ($files['added'] as $file) {
+                            $this->term->green("  [A] $file");
+                        }
+                    }
+                    if (!empty($files['modified'])) {
+                        foreach ($files['modified'] as $file) {
+                            $this->term->yellow("  [M] $file");
+                        }
+                    }
+                    if (!empty($files['deleted'])) {
+                        foreach ($files['deleted'] as $file) {
+                            $this->term->red("  [D] $file");
+                        }
+                    }
+                    $filesCount = count($files['added']) + count($files['modified']) + count($files['deleted']);
+                    $input = $this->term->input("\nUpload changes to $locationName ? [y/N]");
+                    $input->accept(['y', 'n'])->defaultTo('N');
+                    if (strtolower($input->prompt()) == 'y') {
+
+                        $this->term->inline("\nUploading ... ");
+                        $text = $this->term->replaceableText();
+                        $i = 1;
+                        foreach ($location->uploadFiles($rev) as $file) {
+                            $text->set("[$i/$filesCount] $file");
+                            $i++;
+                            sleep(1);
+                        }
+                        $text->set("done.");
+                        $this->term->br();
+                        
+                    }
                 }
-//                $location->uploadRevision();
             } catch (Exception $e) {
                 $this->term->error("$locationName: error - " . $e->getMessage());
                 continue;

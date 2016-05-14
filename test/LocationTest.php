@@ -35,11 +35,12 @@ class LocationTest extends \PHPUnit_Framework_TestCase
 
     public function testSetRevision()
     {
-        $this->location->setRevision('fakeRevision');
-        $this->assertEquals('fakeRevision', $this->location->getRevision());
+        $rev = $this->git->getLastCommit();
+        $this->location->setRevision($rev);
+        $this->assertEquals($rev, $this->location->getRevision());
     }
 
-    public function testGetModifiedFiles() 
+    public function testGetModifiedFiles()
     {
         $this->location->setRevision($this->git->getLastCommit());
         exec('echo blablabla > test.php; git add .; git commit -m "modified test"');
@@ -63,6 +64,7 @@ class LocationTest extends \PHPUnit_Framework_TestCase
 
         $newCommit = $this->git->getLastCommit();
         $this->location->uploadRevision();
+
         $this->assertTrue($fs->has('remote://test.php'));
         $this->assertEquals($newCommit, $fs->read('remote://.revision'));
 

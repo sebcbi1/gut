@@ -22,7 +22,16 @@ class Git
 
     public function getLastCommit():string
     {
-        return $this->exec('rev-parse HEAD')[0];
+        return $this->revParse();
+    }
+
+    public function revParse($rev = 'HEAD'):string
+    {
+        $revision = $this->exec("rev-parse $rev 2> /dev/null", $returnCode);
+        if ($returnCode == 0) {
+            return $revision[0];
+        }
+        throw new Exception("Unknown revision '$rev'.");
     }
 
     public function getLog():array
@@ -42,13 +51,16 @@ class Git
      * U: file is unmerged (you must complete the merge before it can be committed)
      * X: "unknown" change type (most probably a bug, please report it)
      */
-    public function getModifiedFilesBetweenRevisions(string $revision, string $lastCommit):array
+    public function getModifiedFilesBetweenRevisions(string $revision, string $newRevision):array
     {
-        if (!$this->checkIfCommitExistsInLog($revision)) {
+        try {
+            // check if already uploaded revision found localy
+            $revision = $this->revParse($revision);
+        } catch (Exception $e) {
             throw new Exception("Unknown revision $revision. Try merging remote branch locally.");
         }
 
-        $lines = $this->exec("diff --name-status $revision $lastCommit");
+        $lines = $this->exec("diff --name-status $revision $newRevision");
         $return = [
             'added' => [],
             'modified' => [],
@@ -68,12 +80,6 @@ class Git
             }
         }
         return $return;
-    }
-
-    public function checkIfCommitExistsInLog($revision)
-    {
-        $this->exec("show -s $revision >/dev/null 2>&1", $returnCode);
-        return $returnCode == 0;
     }
 
 }

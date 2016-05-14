@@ -2,7 +2,6 @@
 
 namespace Gut;
 
-use Exception;
 use League\Flysystem\Adapter\Ftp;
 use League\Flysystem\Adapter\Local;
 use League\Flysystem\Adapter\NullAdapter;
@@ -17,7 +16,7 @@ class AdapterFactory
                 return new MemoryAdapter();
                 break;
             case 'local':
-                if (false === realpath($adapter['path'])) { 
+                if (false === realpath($adapter['path'])) {
                     throw new Exception('Directory ' . $adapter['path'] .' doesn\'t exists.');
                 }
                 return new Local(realpath($adapter['path']));

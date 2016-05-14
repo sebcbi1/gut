@@ -50,9 +50,9 @@ class Location
     /**
      * @param string|null $revision
      */
-    public function setRevision(string $revision = null)
+    public function setRevision(string $revision = 'HEAD')
     {
-        $revision = $revision ?? $this->git->getLastCommit();
+        $revision = $this->git->revParse($revision);
 
         $revFile = 'remote://' . $this->revisionFile;
         if ($this->filesystem->has($revFile)) {
@@ -68,31 +68,40 @@ class Location
      * @return array
      * @throws Exception
      */
-    public function getModifiedFiles(string $revision = null):array
+    public function getModifiedFiles($revision = 'HEAD'):array
     {
-        $revision = $revision ?? $this->git->getLastCommit();
-        $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $revision);
+        $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $this->git->revParse($revision));
         return $diff;
     }
 
     /**
      * @param string|null $revision
+     * @return \Generator
+     * @throws Exception
      */
-    public function uploadRevision(string $revision = null)
+    public function uploadFiles($revision = 'HEAD')
     {
-        $revision = $revision ?? $this->git->getLastCommit();
+        $revision =  $this->git->revParse($revision);
         $diff = $this->getModifiedFiles($revision);
-
         foreach ($diff['added'] as $file) {
             $this->uploadFile('local://' . $file, 'remote://' . $file);
+            yield $file;
         }
         foreach ($diff['modified'] as $file) {
             $this->uploadFile('local://' . $file, 'remote://' . $file);
+            yield $file;
         }
         foreach ($diff['deleted'] as $file) {
             $this->filesystem->delete('remote://' . $file);
+            yield $file;
         }
         $this->setRevision($revision);
+    }
+
+    public function uploadRevision($revision = 'HEAD') {
+        foreach ($this->uploadFiles($revision) as $file) {
+            //do nothing
+        }
     }
 
     private function uploadFile($local, $remote)
