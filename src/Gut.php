@@ -168,7 +168,7 @@ class Gut
                         foreach ($location->uploadFiles($rev) as $file) {
                             $text->set("[$i/$filesCount] $file");
                             $i++;
-                            sleep(1);
+                            usleep(200000);
                         }
                         $text->set("done.");
                         $this->term->br();

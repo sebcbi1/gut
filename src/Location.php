@@ -92,10 +92,12 @@ class Location
             yield $file;
         }
         foreach ($diff['deleted'] as $file) {
-            $this->filesystem->delete('remote://' . $file);
+            if ($this->filesystem->has('remote://' . $file)) {
+                $this->filesystem->delete('remote://' . $file);
+            }
             yield $file;
         }
-        $this->setRevision($revision);
+//        $this->setRevision($revision);
     }
 
     public function uploadRevision($revision = 'HEAD') {
