@@ -2,5 +2,5 @@
 <?php
 require realpath(__DIR__ . '/vendor/autoload.php');
 
-$gut = new Gut\Gut();
+$gut = new Gut\Cli();
 $gut->parseCommandLineOptions();

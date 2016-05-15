@@ -97,7 +97,7 @@ class Location
             }
             yield $file;
         }
-//        $this->setRevision($revision);
+        $this->setRevision($revision);
     }
 
     public function uploadRevision($revision = 'HEAD') {

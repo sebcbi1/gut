@@ -2,7 +2,6 @@
 
 namespace Gut;
 
-use League\CLImate\CLImate;
 use Symfony\Component\Yaml\Yaml;
 
 class Gut
@@ -22,158 +21,42 @@ class Gut
 
     public function __construct($config = self::CONFIG_FILENAME)
     {
-        $this->term = new CLImate();
-        $this->term->extend('Gut\Cli\ReplaceableText');
-        $this->configure($config);
-    }
-
-    private function configure($config)
-    {
         if (is_string($config)) {
             if (is_file($config)) {
                 $config = Yaml::parse(file_get_contents($config));
             } else {
                 $this->term->error(self::CONFIG_FILENAME . ' is missing.');
-                die(-1);
             }
         }
         $this->config = array_merge($this->config, ($config ?? []));
         $this->config['revision_file_dirty'] = $this->config['revision_file'] . '-dirty';
 
         if (empty($this->config['locations'])) {
-            $this->term->error('no locations set.');
-            die(-1);
+            throw new Exception('no locations set.');
         }
 
         foreach ($this->config['locations'] as $locationName => $location) {
-            try {
-                $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config['revision_file']);
-            } catch (Exception $e) {
-                $this->term->error($locationName . ': '. $e->getMessage());
-                die(-1);
-            }
+            $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config['revision_file']);
         }
 
     }
 
-    public function parseCommandLineOptions()
+    public function getLocation(string $locationName):Location
     {
-        global $argv;
-        $options = array_slice($argv, 1);
-        $command = null;
-        if (count($options) == 0) {
-            $command = '';
-        } else {
-            $command = $options[0];
-            if (in_array($command, ['rollback', 'folder', 'init', 'dirty', 'clean', 'help'])) {
-                $arg = null;
-                if (count($options) > 1) {
-                    $arg = $options[1];
-                }
-            } else {
-                $arg = $options[0];
-                $command = 'unknown';
-            }
+        if (isset($this->locations[$locationName])) {
+            return $this->locations[$locationName];
         }
-        switch ($command) {
-            case '':
-                $this->uploadCommit('HEAD');
-                break;
-            case 'init':
-                $this->init($arg);
-                break;
-            case 'rollback':
-                $rev = $arg ?? 'HEAD^';
-                $this->uploadCommit($rev);
-                break;
-            case 'folder':
-                $this->uploadFolder($arg);
-                break;
-            case 'dirty':
-                $this->dirty();
-                break;
-            case 'clean':
-                $this->cleanDirty();
-                break;
-            case 'unknown':
-                $this->unknownCommand($arg);
-                break;
-            default:
-                $this->showHelp();
-                break;
-        }
-    }
-
-    public function showHelp()
-    {
-        $this->term->addArt(dirname(__FILE__) . '/art');
-        $this->term->green()->draw('gut');
-        $this->term->br();
-        $this->term->green()->inline('gut');
-        $this->term->inline(' version ');
-        $this->term->yellow()->inline(self::VERSION);
-        $this->term->br()->br();
-        $this->term->yellow('Usage:');
-        $this->term->out(' gut [location] [command] [<option>]');
-        $this->term->br();
-        $this->term->yellow('Location:');
-        $this->term->out(' (optional) Location to upload to. (default: all).');
-        $this->term->br();
-        $this->term->yellow('Available commands:');
-        $padding = $this->term->padding(10, ' ');
-
-        $padding->label(' commit')->result('(default) Upload revision. Option: [<commit>|rollback] (default: HEAD).');
-        $padding->label(' init')->result('Initialize location to specified revision. Option: [<commit>] (default: HEAD).');
-        $padding->label(' dirty')->result('Upload not commited files.');
-        $padding->label(' clean')->result('Restore files uploaded with \'dirty\' to their clean repository state.');
-        $padding->label(' folder')->result('Upload specified folder. Option: <folder>');
-        $padding->label(' help')->result('Show this help message.');
-        $this->term->br();  
+        throw new Exception("Location '$locationName' not found");
     }
 
     public function uploadCommit($rev)
     {
         foreach ($this->locations as $locationName => $location) {
             try {
-
-                $files = $location->getModifiedFiles($rev);
-                if (empty($files['added']) && empty($files['modified']) && empty($files['deleted'])) {
-                    $this->term->out("\n$locationName: no files to upload.\n");
-                } else {
-                    $this->term->out("\n$locationName - files to be uploaded/deleted :\n");
-
-                    if (!empty($files['added'])) {
-                        foreach ($files['added'] as $file) {
-                            $this->term->green("  [A] $file");
-                        }
-                    }
-                    if (!empty($files['modified'])) {
-                        foreach ($files['modified'] as $file) {
-                            $this->term->yellow("  [M] $file");
-                        }
-                    }
-                    if (!empty($files['deleted'])) {
-                        foreach ($files['deleted'] as $file) {
-                            $this->term->red("  [D] $file");
-                        }
-                    }
-                    $filesCount = count($files['added']) + count($files['modified']) + count($files['deleted']);
-                    $input = $this->term->input("\nUpload changes to $locationName ? [y/N]");
-                    $input->accept(['y', 'n'])->defaultTo('N');
-                    if (strtolower($input->prompt()) == 'y') {
-
-                        $this->term->inline("\nUploading ... ");
-                        $text = $this->term->replaceableText();
-                        $i = 1;
-                        foreach ($location->uploadFiles($rev) as $file) {
-                            $text->set("[$i/$filesCount] $file");
-                            $i++;
-                            usleep(200000);
-                        }
-                        $text->set("done.");
-                        $this->term->br();
-                        
-                    }
+                foreach ($location->uploadFiles($rev) as $file) {
+                    $text->set("[$i/$filesCount] $file");
+                    $i++;
+                    usleep(200000);
                 }
             } catch (Exception $e) {
                 $this->term->error("$locationName: error - " . $e->getMessage());
@@ -185,47 +68,32 @@ class Gut
     public function init(string $revision = null)
     {
         foreach ($this->locations as $locationName => $location) {
-            try {
-                $location->setRevision($revision);
-            } catch (Exception $e) {
-                $this->term->error("$locationName: init error");
-                continue;
-            }
+            $location->setRevision($revision);
         }
     }
 
-    private function unknownCommand(string $command)
-    {
-        $this->term->error('unknown command: '. $command);
-        $this->showHelp();
-    }
 
     public function rollback(string $revision = '')
     {
-        $this->term->out('rollback');
+//        $this->uploadCommit('HEAD^');
+//        $this->term->out('rollback');
     }
 
     public function uploadFolder()
     {
-        $this->term->out('folder');
+//        $this->term->out('folder');
     }
 
     public function dirty()
     {
-        $this->term->out('dirty');
+//        $this->term->out('dirty');
     }
 
     public function cleanDirty()
     {
-        $this->term->out('clean');
+//        $this->term->out('clean');
     }
 
-    public function getLocation(string $locationName):Location
-    {
-        if (isset($this->locations[$locationName])) {
-            return $this->locations[$locationName];
-        }
-        throw new Exception("Location '$locationName' not found");
-    }
+
 
 }
