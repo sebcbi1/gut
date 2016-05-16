@@ -21,14 +21,14 @@ class Location
     private $revisionFile;
 
 
-    public function __construct(AdapterInterface $adapter, string $revisionFile, string $repoPath = null)
+    public function __construct(AdapterInterface $adapter, string $revisionFile, Git $git)
     {
         $this->filesystem = new MountManager([
             'local'  => new Filesystem(new Local('.')),
             'remote' => new Filesystem($adapter)
         ]);
         $this->revisionFile = $revisionFile;
-        $this->git = new Git($repoPath);
+        $this->git = $git;
     }
 
     public function getFileSystem():MountManager

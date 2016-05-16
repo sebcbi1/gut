@@ -32,6 +32,12 @@ class Cli
         $this->gut = new Gut($config);
     }
 
+    public static function execute($config = self::CONFIG_FILENAME)
+    {
+        $cli = new self($config);
+        $cli->parseCommandLineOptions();
+    }
+
 
     public function parseCommandLineOptions()
     {
@@ -110,7 +116,7 @@ class Cli
 
     public function uploadCommit($rev)
     {
-        foreach ($this->locations as $locationName => $location) {
+        foreach ($this->gut->getLocations() as $locationName => $location) {
             try {
 
                 $files = $location->getModifiedFiles($rev);

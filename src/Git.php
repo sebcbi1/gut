@@ -34,6 +34,16 @@ class Git
         throw new Exception("Unknown revision '$rev'.");
     }
 
+    public function stash()
+    {
+        $this->git->exec('stash -u');
+    }
+
+    public function stashPop()
+    {
+        $this->git->exec('stash pop');
+    }
+
     public function getLog():array
     {
         return $this->exec('log --format="%H"');

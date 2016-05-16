@@ -17,8 +17,8 @@ class LocationTest extends \PHPUnit_Framework_TestCase
         // add a file
         exec('touch test.php; git add .; git commit -m "add test"');
 
-        $this->location = new Location(AdapterFactory::create(['type' =>'memory']), '.revision', $this->repoPath );
         $this->git = new \Gut\Git($this->repoPath);
+        $this->location = new Location(AdapterFactory::create(['type' =>'memory']), '.revision', $this->git);
 
     }
 

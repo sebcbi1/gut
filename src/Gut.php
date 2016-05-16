@@ -18,6 +18,11 @@ class Gut
      * @var Location[]
      */
     private $locations = [];
+    
+    /**
+     * @var Git
+     */
+    private $git;
 
     public function __construct($config = self::CONFIG_FILENAME)
     {
@@ -35,10 +40,17 @@ class Gut
             throw new Exception('no locations set.');
         }
 
+        $this->git = new Git();
+
         foreach ($this->config['locations'] as $locationName => $location) {
-            $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config['revision_file']);
+            $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config['revision_file'], $this->git);
         }
 
+    }
+
+    public function getLocations(): array 
+    {
+        return $this->locations;
     }
 
     public function getLocation(string $locationName):Location
@@ -51,19 +63,20 @@ class Gut
 
     public function uploadCommit($rev)
     {
+        $this->git->stash();
         foreach ($this->locations as $locationName => $location) {
             try {
-                foreach ($location->uploadFiles($rev) as $file) {
-                    $text->set("[$i/$filesCount] $file");
-                    $i++;
-                    usleep(200000);
-                }
+                $location->uploadRevision($rev);
             } catch (Exception $e) {
                 $this->term->error("$locationName: error - " . $e->getMessage());
                 continue;
             }
         }
+        $this->git->stashPop();
     }
+
+
+
 
     public function init(string $revision = null)
     {
