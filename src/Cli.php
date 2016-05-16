@@ -115,12 +115,16 @@ class Cli
 
     public function uploadCommit($rev)
     {
+        $files = $this->gut->getLocation('production')->getModifiedFiles($rev);
+        var_dump($files);
+        die;
         $branch = $this->gut->checkoutCommit($rev);
 
         foreach ($this->gut->getLocations() as $locationName => $location) {
             try {
 
                 $files = $location->getModifiedFiles($rev);
+
                 if (empty($files['added']) && empty($files['modified']) && empty($files['deleted'])) {
                     $this->term->out("\n$locationName: no files to upload.\n");
                 } else {
@@ -192,7 +196,7 @@ class Cli
         $this->term->out("done.\n");
     }
 
-    private function uploadFolder()
+    private function uploadFolder($arg)
     {
         $this->term->inline("\nUploading $arg... ");
         $this->gut->uploadFolder($arg);

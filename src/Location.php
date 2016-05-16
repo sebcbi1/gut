@@ -20,6 +20,21 @@ class Location
      */
     private $revisionFile;
 
+    /**
+     * @var MountManager
+     */
+    private $filesystem;
+
+    /**
+     * @var Git
+     */
+    private $git;
+
+    /**
+     * @var array
+     */
+    private $skipFilePatterns;
+
 
     public function __construct(AdapterInterface $adapter, array $config, Git $git)
     {
@@ -29,6 +44,7 @@ class Location
         ]);
         $this->revisionFile = $config['revision_file'];
         $this->dirtyFile = $this->revisionFile . '-dirty';
+        $this->skipFilePatterns = $config['skip'] ?? [];
         $this->git = $git;
     }
 
@@ -72,13 +88,13 @@ class Location
     public function getModifiedFiles($revision = 'HEAD'):array
     {
         $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $this->git->revParse($revision));
-        foreach ($diff as &$status) {
-            foreach ($status as &$file) {
+        foreach ($diff as $status => $files) {
+            foreach ($files as $k => $file) {
                 if ($this->skip($file)) {
-                    unset($file);
+                    unset($files[$k]);
                 }
             }
-            $status = array_filter($status);
+            $diff[$status] = array_filter($files);
         }
         return $diff;
     }
@@ -179,7 +195,12 @@ class Location
 
     private function skip($file)
     {
-        return true;
+        foreach ($this->skipFilePatterns as $pattern) {
+            if (preg_match('#'.$pattern.'#', $file)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
