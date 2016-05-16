@@ -49,7 +49,7 @@ class Cli
             $arg = null;
         } else {
             $command = $options[0];
-            if (in_array($command, ['commit','rollback', 'folder', 'init', 'dirty', 'clean', 'help'])) {
+            if (in_array($command, ['commit','rollback', 'folder', 'dir', 'init', 'dirty', 'clean', 'help'])) {
                 $arg = null;
                 if (count($options) > 1) {
                     $arg = $options[1];
@@ -71,17 +71,17 @@ class Cli
                 $this->uploadCommit('HEAD^');
                 break;
             case 'folder':
-                $this->gut->uploadFolder($arg);
+            case 'dir':
+                $this->uploadFolder($arg);
                 break;
             case 'dirty':
-                $this->gut->dirty();
+                $this->dirty();
                 break;
             case 'clean':
-                $this->gut->cleanDirty();
+                $this->cleanDirty();
                 break;
             case 'unknown':
-                $this->unknownCommand($arg);
-                break;
+                $this->term->error('unknown command: '. $command);
             default:
                 $this->showHelp();
                 break;
@@ -100,9 +100,6 @@ class Cli
         $this->term->yellow('Usage:');
         $this->term->out(' gut [command] [<option>]');
         $this->term->br();
-//        $this->term->yellow('Location:');
-//        $this->term->out(' (optional) Location to upload to. (default: all).');
-//        $this->term->br();
         $this->term->yellow('Available commands:');
         $padding = $this->term->padding(10, ' ');
 
@@ -170,11 +167,36 @@ class Cli
 
         $this->gut->checkoutHead($branch);
     }
-    
-    private function unknownCommand(string $command)
+
+    private function dirty()
     {
-        $this->term->error('unknown command: '. $command);
-        $this->showHelp();
+        $files = $this->gut->getNotCommitedFiles();
+        $choices = [];
+        foreach (['added', 'modified','deleted'] as $status) {
+            $statusLabel = '['. strtoupper(substr($status, 0, 1)) . '] ';
+            foreach ($files[$status] as $file) {
+                $choices[$file] = $statusLabel . $file;
+            }
+        }
+        $response = $this->term->checkboxes("\nUpload the following uncommited files: ", $choices)->prompt();
+        if (!empty($response)) {
+            $this->gut->uploadNotCommitedFiles($response);
+        }
+        $this->term->br();
+    }
+    
+    private function cleanDirty()
+    {
+        $this->term->inline("\nCleaning uncommited files $arg... ");
+        $this->gut->cleanNotCommitedFiles();
+        $this->term->out("done.\n");
+    }
+
+    private function uploadFolder()
+    {
+        $this->term->inline("\nUploading $arg... ");
+        $this->gut->uploadFolder($arg);
+        $this->term->out("done.\n");
     }
 
 }

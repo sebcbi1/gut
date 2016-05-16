@@ -62,6 +62,28 @@ class Git
         return $this->exec('log --format="%H"');
     }
     
+
+    public function getUncommitedFiles():array
+    {
+        $lines = $this->exec("diff --name-status");
+        return $this->parseDiff($lines);
+    }
+
+    public function getModifiedFilesBetweenRevisions(string $revision = '', string $newRevision = ''):array
+    {
+        try {
+            // check if already uploaded revision found localy
+            $revision = $this->revParse($revision);
+        } catch (Exception $e) {
+            throw new Exception("Unknown revision $revision. Try merging remote branch locally.");
+        }
+
+        $lines = $this->exec("diff --name-status $revision $newRevision");
+
+        return $this->parseDiff($lines);
+    }
+
+
     /**
      * Git Status Codes
      *
@@ -74,16 +96,8 @@ class Git
      * U: file is unmerged (you must complete the merge before it can be committed)
      * X: "unknown" change type (most probably a bug, please report it)
      */
-    public function getModifiedFilesBetweenRevisions(string $revision, string $newRevision):array
+    public function parseDiff(array $lines):array
     {
-        try {
-            // check if already uploaded revision found localy
-            $revision = $this->revParse($revision);
-        } catch (Exception $e) {
-            throw new Exception("Unknown revision $revision. Try merging remote branch locally.");
-        }
-
-        $lines = $this->exec("diff --name-status $revision $newRevision");
         $return = [
             'added' => [],
             'modified' => [],

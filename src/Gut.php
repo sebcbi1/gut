@@ -34,7 +34,6 @@ class Gut
             }
         }
         $this->config = array_merge($this->config, ($config ?? []));
-        $this->config['revision_file_dirty'] = $this->config['revision_file'] . '-dirty';
 
         if (empty($this->config['locations'])) {
             throw new Exception('no locations set.');
@@ -43,7 +42,7 @@ class Gut
         $this->git = new Git();
 
         foreach ($this->config['locations'] as $locationName => $location) {
-            $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config['revision_file'], $this->git);
+            $this->locations[$locationName] = new Location(AdapterFactory::create($location), $this->config, $this->git);
         }
 
     }
@@ -78,9 +77,7 @@ class Gut
                 continue;
             }
         }
-
         $this->checkoutHead($branch);
-
 
     }
 
@@ -91,7 +88,7 @@ class Gut
         try {
             $this->git->checkout($rev);
         } catch (Exception $e) {
-            $this->stashPop();
+            $this->git->stashPop();
             throw new Exception($e->getMessage());
         }
         return $branch;
@@ -103,8 +100,6 @@ class Gut
         $this->git->stashPop();
     }
 
-
-
     public function init(string $revision = null)
     {
         foreach ($this->locations as $locationName => $location) {
@@ -112,27 +107,33 @@ class Gut
         }
     }
 
-
-    public function rollback(string $revision = '')
+    public function uploadFolder($folder)
     {
-        $this->uploadCommit('HEAD^');
+        foreach ($this->locations as $locationName => $location) {
+            $location->uploadFolder($folder);
+        }
     }
 
-    public function uploadFolder()
+    public function uploadNotCommitedFiles($files = [])
     {
-//        $this->term->out('folder');
+        foreach ($this->locations as $locationName => $location) {
+            $location->uploadNotCommitedFiles($files);
+        }
     }
 
-    public function dirty()
+    public function cleanNotCommitedFiles()
     {
-//        $this->term->out('dirty');
+        $this->git->stash();
+        foreach ($this->locations as $locationName => $location) {
+            $location->cleanNotCommitedFiles();
+        }
+        $this->git->stashPop();
+
     }
 
-    public function cleanDirty()
+    public function getNotCommitedFiles()
     {
-//        $this->term->out('clean');
+        return $this->git->getUncommitedFiles();
     }
-
-
 
 }

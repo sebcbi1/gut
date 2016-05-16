@@ -21,13 +21,14 @@ class Location
     private $revisionFile;
 
 
-    public function __construct(AdapterInterface $adapter, string $revisionFile, Git $git)
+    public function __construct(AdapterInterface $adapter, array $config, Git $git)
     {
         $this->filesystem = new MountManager([
             'local'  => new Filesystem(new Local('.')),
             'remote' => new Filesystem($adapter)
         ]);
-        $this->revisionFile = $revisionFile;
+        $this->revisionFile = $config['revision_file'];
+        $this->dirtyFile = $this->revisionFile . '-dirty';
         $this->git = $git;
     }
 
@@ -71,6 +72,14 @@ class Location
     public function getModifiedFiles($revision = 'HEAD'):array
     {
         $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $this->git->revParse($revision));
+        foreach ($diff as &$status) {
+            foreach ($status as &$file) {
+                if ($this->skip($file)) {
+                    unset($file);
+                }
+            }
+            $status = array_filter($status);
+        }
         return $diff;
     }
 
@@ -106,7 +115,7 @@ class Location
         }
     }
 
-    private function uploadFile($local, $remote)
+    public function uploadFile($local, $remote)
     {
         if ($this->filesystem->has($remote)) {
             $content = $this->filesystem->read($local);
@@ -115,5 +124,63 @@ class Location
             $this->filesystem->copy($local, $remote);
         }
     }
+
+    public function uploadFolder($folder)
+    {
+        $new = '-' . substr(md5(microtime().rand(0,10000)), 0, 7);
+        if ($this->filesystem->copy('local://' . $folder, 'remote://' . $folder.$new)) {
+            $old = '-bak-' . date('YmdHis');
+            if ($this->filesystem->has('remote://' . $folder)) {
+                $this->filesystem->move('remote://' . $folder, 'remote://' . $folder.$old);
+            }
+            $this->filesystem->move('remote://' . $folder.$new, 'remote://' . $folder);
+        }
+    }
+
+    public function uploadNotCommitedFiles($files)
+    {
+        foreach ($files as $file) {
+            $this->uploadFile('local://'.$file, 'remote://'.$file);
+        }
+
+        $dirty = 'remote://' . $this->dirtyFile;
+        if ($this->filesystem->has($dirty)) {
+            $oldNotCommitedFiles = $this->filesystem->read($dirty);
+            $oldNotCommitedFiles = explode("\n", $oldNotCommitedFiles);
+            $files = array_unique(array_merge($oldNotCommitedFiles, $files));
+        }
+
+        $content = implode("\n", $files);
+
+        if ($this->filesystem->has($dirty)) {
+            $this->filesystem->update($dirty, $content);
+        } else {
+            $this->filesystem->write($dirty, $content);
+        }
+
+    }
+
+    public function cleanNotCommitedFiles()
+    {
+        $dirty = 'remote://' . $this->dirtyFile;
+        if ($this->filesystem->has($dirty)) {
+            $dirtyFiles = $this->filesystem->read($dirty);
+            $dirtyFiles = explode("\n", $dirtyFiles);
+            foreach ($dirtyFiles as $file) {
+                if ($this->filesystem->has('local://'.$file)) {
+                    $this->uploadFile('local://'.$file, 'remote://'.$file);
+                } else {
+                    $this->filesystem->delete('remote://'.$file);
+                }
+            }
+            $this->filesystem->delete($dirty);
+        }
+    }
+
+    private function skip($file)
+    {
+        return true;
+    }
+
 
 }
