@@ -48,6 +48,11 @@ class Gut
 
     }
 
+    public function git()
+    {
+        return $this->git;
+    }
+
     public function getLocations(): array 
     {
         return $this->locations;
@@ -61,9 +66,10 @@ class Gut
         throw new Exception("Location '$locationName' not found");
     }
 
-    public function uploadCommit($rev)
+    public function uploadCommit($rev = 'HEAD')
     {
-        $this->git->stash();
+        $branch = $this->checkoutCommit($rev);
+
         foreach ($this->locations as $locationName => $location) {
             try {
                 $location->uploadRevision($rev);
@@ -72,9 +78,30 @@ class Gut
                 continue;
             }
         }
-        $this->git->stashPop();
+
+        $this->checkoutHead($branch);
+
+
     }
 
+    public function checkoutCommit($rev)
+    {
+        $this->git->stash();
+        $branch = $this->git->getCurrentBranch();
+        try {
+            $this->git->checkout($rev);
+        } catch (Exception $e) {
+            $this->stashPop();
+            throw new Exception($e->getMessage());
+        }
+        return $branch;
+    }
+
+    public function checkoutHead($branch)
+    {
+        $this->git->checkout($branch);
+        $this->git->stashPop();
+    }
 
 
 
@@ -88,8 +115,7 @@ class Gut
 
     public function rollback(string $revision = '')
     {
-//        $this->uploadCommit('HEAD^');
-//        $this->term->out('rollback');
+        $this->uploadCommit('HEAD^');
     }
 
     public function uploadFolder()

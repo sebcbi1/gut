@@ -36,12 +36,25 @@ class Git
 
     public function stash()
     {
-        $this->git->exec('stash -u');
+        $this->exec('stash -u');
     }
 
     public function stashPop()
     {
-        $this->git->exec('stash pop');
+        $this->exec('stash pop');
+    }
+
+    public function getCurrentBranch()
+    {
+        return $this->exec('rev-parse --abbrev-ref HEAD')[0];
+    }
+
+    public function checkout(string $arg)
+    {
+        $out = $this->exec("checkout $arg 2>&1", $returnCode);
+        if ($returnCode != 0) {
+            throw new Exception(implode("\n",$out));
+        }
     }
 
     public function getLog():array

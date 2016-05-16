@@ -45,10 +45,11 @@ class Cli
         $options = array_slice($argv, 1);
         $command = null;
         if (count($options) == 0) {
-            $command = '';
+            $command = 'commit';
+            $arg = null;
         } else {
             $command = $options[0];
-            if (in_array($command, ['rollback', 'folder', 'init', 'dirty', 'clean', 'help'])) {
+            if (in_array($command, ['commit','rollback', 'folder', 'init', 'dirty', 'clean', 'help'])) {
                 $arg = null;
                 if (count($options) > 1) {
                     $arg = $options[1];
@@ -59,15 +60,15 @@ class Cli
             }
         }
         switch ($command) {
-            case '':
-                $this->gut->uploadCommit('HEAD');
+            case 'commit':
+                $rev = $arg ?? 'HEAD';
+                $this->uploadCommit($rev);
                 break;
             case 'init':
                 $this->gut->init($arg);
                 break;
             case 'rollback':
-                $rev = $arg ?? 'HEAD^';
-                $this->gut->uploadCommit($rev);
+                $this->uploadCommit('HEAD^');
                 break;
             case 'folder':
                 $this->gut->uploadFolder($arg);
@@ -97,15 +98,16 @@ class Cli
         $this->term->yellow()->inline(self::VERSION);
         $this->term->br()->br();
         $this->term->yellow('Usage:');
-        $this->term->out(' gut [location] [command] [<option>]');
+        $this->term->out(' gut [command] [<option>]');
         $this->term->br();
-        $this->term->yellow('Location:');
-        $this->term->out(' (optional) Location to upload to. (default: all).');
-        $this->term->br();
+//        $this->term->yellow('Location:');
+//        $this->term->out(' (optional) Location to upload to. (default: all).');
+//        $this->term->br();
         $this->term->yellow('Available commands:');
         $padding = $this->term->padding(10, ' ');
 
-        $padding->label(' commit')->result('(default) Upload revision. Option: [<commit>|rollback] (default: HEAD).');
+        $padding->label(' commit')->result('(default) Upload revision. Option: [<commit>] (default: HEAD).');
+        $padding->label(' rollback')->result('shortcut command for "gut commit HEAD^"');
         $padding->label(' init')->result('Initialize location to specified revision. Option: [<commit>] (default: HEAD).');
         $padding->label(' dirty')->result('Upload not commited files.');
         $padding->label(' clean')->result('Restore files uploaded with \'dirty\' to their clean repository state.');
@@ -116,6 +118,8 @@ class Cli
 
     public function uploadCommit($rev)
     {
+        $branch = $this->gut->checkoutCommit($rev);
+
         foreach ($this->gut->getLocations() as $locationName => $location) {
             try {
 
@@ -163,6 +167,8 @@ class Cli
                 continue;
             }
         }
+
+        $this->gut->checkoutHead($branch);
     }
     
     private function unknownCommand(string $command)
