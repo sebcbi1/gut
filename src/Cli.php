@@ -3,17 +3,13 @@
 namespace Gut;
 
 use League\CLImate\CLImate;
+use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
 class Cli
 {
     const VERSION = '0.9.0';
     const CONFIG_FILENAME = '.gut.yml';
-    const REVISION_FILE = '.revision';
-
-    private $config = [
-        'revision_file' => self::REVISION_FILE,
-    ];
 
     /**
      * @var Location[]
@@ -29,6 +25,19 @@ class Cli
     {
         $this->term = new CLImate();
         $this->term->extend('Gut\Cli\ReplaceableText');
+        
+        if (!is_file($config)) {
+            $this->term->error(self::CONFIG_FILENAME . ' is missing.');
+            return;
+        }
+
+        try {
+            $config = Yaml::parse(file_get_contents($config));
+        } catch (ParseException $e) {
+            $this->term->error(self::CONFIG_FILENAME . ': ' .  $e->getMessage());
+            return;
+        }
+        
         $this->gut = new Gut($config);
     }
 
@@ -41,6 +50,7 @@ class Cli
 
     public function parseCommandLineOptions()
     {
+
         $this->term->arguments->add([
             'location' => [
                 'prefix'       => 'l',
@@ -52,16 +62,19 @@ class Cli
         $this->term->arguments->parse();
         $location = $this->term->arguments->get('location');
         if (!empty($location)) {
-            try {
-                $this->gut->setLocation($location);
-            } catch (Exception $e) {
-                $this->term->error($e->getMessage());
-            }
+
         }
 
         global $argv;
         $options = array_slice($argv, 1);
         $command = null;
+        if (count($options) > 0) {
+            try {
+                $this->gut->getLocation($options[0]);
+                $options = array_slice($options, 1);
+            } catch (Exception $e) {}
+        }
+
         if (count($options) == 0) {
             $command = 'commit';
             $arg = null;
@@ -70,13 +83,15 @@ class Cli
             if (in_array($command, ['commit','rollback', 'folder', 'dir', 'init', 'dirty', 'clean', 'help'])) {
                 $arg = null;
                 if (count($options) > 1) {
-                    $arg = $options[1];
+                    $arg    = $options[1];
                 }
             } else {
-                $arg = $options[0];
-                $command = 'unknown';
+                $this->term->error('unknown command or location: '. $command);
+                $this->showHelp();
+                return;
             }
         }
+
         switch ($command) {
             case 'commit':
                 $rev = $arg ?? 'HEAD';
@@ -98,8 +113,6 @@ class Cli
             case 'clean':
                 $this->cleanDirty();
                 break;
-            case 'unknown':
-                $this->term->error('unknown command: '. $command);
             default:
                 $this->showHelp();
                 break;
@@ -116,7 +129,10 @@ class Cli
         $this->term->yellow()->inline(self::VERSION);
         $this->term->br()->br();
         $this->term->yellow('Usage:');
-        $this->term->out(' gut [command] [<option>]');
+        $this->term->out(' gut [location] [command] [<option>]');
+        $this->term->br();
+        $this->term->yellow('Location:');
+        $this->term->out(' (optional) Location to upload to. (default: all).');
         $this->term->br();
         $this->term->yellow('Available commands:');
         $padding = $this->term->padding(10, ' ');

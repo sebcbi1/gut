@@ -118,8 +118,8 @@ class Location
     }
 
     public function uploadRevision(string $revision = 'HEAD') {
-        while ($this->uploadFiles($revision)->valid()) {
-            $this->uploadFiles($revision)->next();
+        foreach ($this->uploadFiles($revision) as $file) {
+            //do nothing
         }
     }
 

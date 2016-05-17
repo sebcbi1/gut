@@ -2,12 +2,8 @@
 
 namespace Gut;
 
-use Symfony\Component\Yaml\Yaml;
-
 class Gut
 {
-    const VERSION = '0.9.0';
-    const CONFIG_FILENAME = '.gut.yml';
     const REVISION_FILE = '.revision';
 
     private $config = [
@@ -24,15 +20,9 @@ class Gut
      */
     private $git;
 
-    public function __construct($config = self::CONFIG_FILENAME)
+    public function __construct($config = [])
     {
-        if (is_string($config)) {
-            if (is_file($config)) {
-                $config = Yaml::parse(file_get_contents($config));
-            } else {
-                $this->term->error(self::CONFIG_FILENAME . ' is missing.');
-            }
-        }
+
         $this->config = array_merge($this->config, ($config ?? []));
 
         if (empty($this->config['locations'])) {
