@@ -2,3 +2,5 @@
 /vendor
 .php-version
 .gut.yml
+/build
+composer.lock

@@ -28,14 +28,14 @@ class Cli
         
         if (!is_file($config)) {
             $this->term->error(self::CONFIG_FILENAME . ' is missing.');
-            return;
+            die();
         }
 
         try {
             $config = Yaml::parse(file_get_contents($config));
         } catch (ParseException $e) {
             $this->term->error(self::CONFIG_FILENAME . ': ' .  $e->getMessage());
-            return;
+            die();
         }
         
         $this->gut = new Gut($config);
