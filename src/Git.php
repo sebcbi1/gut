@@ -36,12 +36,18 @@ class Git
 
     public function stash()
     {
-        $this->exec('stash -u');
+        $out = $this->exec('stash -u 2>&1', $returnCode);
+        if ($returnCode != 0) {
+            throw new Exception(implode("\n",$out));
+        }
     }
 
     public function stashPop()
     {
-        $this->exec('stash pop');
+        $out = $this->exec('stash pop 2>&1', $returnCode);
+        if ($returnCode != 0) {
+            throw new Exception(implode("\n",$out));
+        }
     }
 
     public function getCurrentBranch()
