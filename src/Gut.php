@@ -94,7 +94,9 @@ class Gut
     public function checkoutHead($branch)
     {
         $this->git->checkout($branch);
-        $this->git->stashPop();
+        try {
+            $this->git->stashPop();
+        } catch (Exception $e) {}
     }
 
     public function init(string $revision = null)
