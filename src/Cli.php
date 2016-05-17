@@ -51,20 +51,6 @@ class Cli
     public function parseCommandLineOptions()
     {
 
-        $this->term->arguments->add([
-            'location' => [
-                'prefix'       => 'l',
-                'longPrefix'   => 'location',
-                'description'  => 'Execute command only for the specified location'
-            ]
-        ]);
-
-        $this->term->arguments->parse();
-        $location = $this->term->arguments->get('location');
-        if (!empty($location)) {
-
-        }
-
         global $argv;
         $options = array_slice($argv, 1);
         $command = null;
