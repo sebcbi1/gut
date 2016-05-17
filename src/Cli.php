@@ -50,13 +50,12 @@ class Cli
 
     public function parseCommandLineOptions()
     {
-
         global $argv;
         $options = array_slice($argv, 1);
         $command = null;
         if (count($options) > 0) {
             try {
-                $this->gut->getLocation($options[0]);
+                $this->gut->setLocation($options[0]);
                 $options = array_slice($options, 1);
             } catch (Exception $e) {}
         }
