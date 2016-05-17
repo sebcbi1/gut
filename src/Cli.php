@@ -186,7 +186,7 @@ class Cli
                     if ($location->conditionalPurge($files['modified'])) {
                         $this->term->inline("Purging folders ... ");
                         $location->purge();
-                        $this->term->out("done."),
+                        $this->term->out("done.");
                     }
                 }
             } catch (Exception $e) {
