@@ -20,7 +20,6 @@ class LocationTest extends \PHPUnit_Framework_TestCase
         $this->git = new \Gut\Git($this->repoPath);
         $config = ['revision_file' => '.revision'];
         $this->location = new Location(AdapterFactory::create(['type' =>'memory']), $config, $this->git);
-
     }
 
     public function tearDown()

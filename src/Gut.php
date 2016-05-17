@@ -99,21 +99,21 @@ class Gut
 
     public function init(string $revision = null)
     {
-        foreach ($this->locations as $locationName => $location) {
+        foreach ($this->locations as $location) {
             $location->setRevision($revision);
         }
     }
 
     public function uploadFolder($folder)
     {
-        foreach ($this->locations as $locationName => $location) {
+        foreach ($this->locations as $location) {
             $location->uploadFolder($folder);
         }
     }
 
     public function uploadNotCommitedFiles($files = [])
     {
-        foreach ($this->locations as $locationName => $location) {
+        foreach ($this->locations as $location) {
             $location->uploadNotCommitedFiles($files);
         }
     }
@@ -121,7 +121,7 @@ class Gut
     public function cleanNotCommitedFiles()
     {
         $this->git->stash();
-        foreach ($this->locations as $locationName => $location) {
+        foreach ($this->locations as $location) {
             $location->cleanNotCommitedFiles();
         }
         $this->git->stashPop();
@@ -131,6 +131,12 @@ class Gut
     public function getNotCommitedFiles()
     {
         return $this->git->getUncommitedFiles();
+    }
+
+    public function purge() {
+        foreach ($this->locations as $location) {
+            $location->purge();
+        }
     }
 
 

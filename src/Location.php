@@ -35,6 +35,10 @@ class Location
      */
     private $skipFilePatterns;
 
+    /**
+     * @var array
+     */
+    private $purgeFolders;
 
     public function __construct(AdapterInterface $adapter, array $config, Git $git)
     {
@@ -44,7 +48,22 @@ class Location
         ]);
         $this->revisionFile = $config['revision_file'];
         $this->dirtyFile = $this->revisionFile . '-dirty';
+
         $this->skipFilePatterns = $config['skip'] ?? [];
+        if (is_string($this->skipFilePatterns)) {
+            $this->skipFilePatterns = [$this->skipFilePatterns];
+        }
+
+        $this->purgeFolders = $config['purge'] ?? [];
+        if (is_string($this->purgeFolders)) {
+            $this->purgeFolders = [$this->purgeFolders];
+        }
+
+        $this->purgeFoldersConditions = $config['purge_condition'] ?? [];
+        if (is_string($this->purgeFoldersConditions)) {
+            $this->purgeFoldersConditions = [$this->purgeFoldersConditions];
+        }
+
         $this->git = $git;
     }
 
@@ -115,6 +134,7 @@ class Location
             yield $file;
         }
         $this->setRevision($revision);
+
     }
 
     public function uploadRevision(string $revision = 'HEAD') {
@@ -208,5 +228,37 @@ class Location
         return false;
     }
 
+    public function purge()
+    {
+        foreach ($this->purgeFolders as $folder) {
+            $this->purgeFolder($folder);
+        }
+    }
+
+    private function purgeFolder($folder)
+    {
+        if ($this->filesystem->has('remote://' . $folder)) {
+            $contents = $this->filesystem->listContents('remote://' . $folder, true);
+            foreach ($contents as $content) {
+                if ($content['type'] == 'file') {
+                    $this->filesystem->delete('remote://' . $content['path']);
+                } elseif ($content['type'] == 'dir') {
+                    $this->filesystem->deleteDir('remote://' . $content['path']);
+                }
+            }
+        }
+    }
+
+    public function conditionalPurge($modifiedFiles = [])
+    {
+        foreach ($this->purgeFoldersConditions as $pattern) {
+            foreach ($modifiedFiles as $file) {
+                if (fnmatch($pattern, $file)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
 }

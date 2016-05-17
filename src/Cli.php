@@ -65,7 +65,7 @@ class Cli
             $arg = null;
         } else {
             $command = $options[0];
-            if (in_array($command, ['commit','rollback', 'folder', 'dir', 'init', 'dirty', 'clean', 'help'])) {
+            if (in_array($command, ['commit','rollback', 'folder', 'dir', 'init', 'dirty', 'clean', 'purge', 'help'])) {
                 $arg = null;
                 if (count($options) > 1) {
                     $arg    = $options[1];
@@ -94,6 +94,9 @@ class Cli
                 break;
             case 'dirty':
                 $this->dirty();
+                break;
+            case 'purge':
+                $this->purge();
                 break;
             case 'clean':
                 $this->cleanDirty();
@@ -179,6 +182,12 @@ class Cli
                         $this->term->br();
                         
                     }
+                    
+                    if ($location->conditionalPurge($files['modified'])) {
+                        $this->term->inline("Purging folders ... ");
+                        $location->purge();
+                        $this->term->out("done."),
+                    }
                 }
             } catch (Exception $e) {
                 $this->term->error("$locationName: error - " . $e->getMessage());
@@ -217,6 +226,13 @@ class Cli
     {
         $this->term->inline("\nUploading $arg... ");
         $this->gut->uploadFolder($arg);
+        $this->term->out("done.\n");
+    }
+
+    private function purge()
+    {
+        $this->term->inline("\nPurging directories ... ");
+        $this->gut->purge();
         $this->term->out("done.\n");
     }
 
