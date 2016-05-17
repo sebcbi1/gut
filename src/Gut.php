@@ -57,6 +57,13 @@ class Gut
         return $this->locations;
     }
 
+    public function setLocation($locationName)
+    {
+        if ($location = $this->getLocation($locationName)) {
+            $this->locations = [[$locationName => $location]];
+        }
+    }
+
     public function getLocation(string $locationName):Location
     {
         if (isset($this->locations[$locationName])) {
@@ -135,5 +142,7 @@ class Gut
     {
         return $this->git->getUncommitedFiles();
     }
+
+
 
 }

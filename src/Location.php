@@ -88,15 +88,7 @@ class Location
     public function getModifiedFiles($revision = 'HEAD'):array
     {
         $diff = $this->git->getModifiedFilesBetweenRevisions($this->getRevision(), $this->git->revParse($revision));
-        foreach ($diff as $status => $files) {
-            foreach ($files as $k => $file) {
-                if ($this->skip($file)) {
-                    unset($files[$k]);
-                }
-            }
-            $diff[$status] = array_filter($files);
-        }
-        return $diff;
+        return $this->filter($diff);
     }
 
     /**
@@ -125,13 +117,13 @@ class Location
         $this->setRevision($revision);
     }
 
-    public function uploadRevision($revision = 'HEAD') {
-        foreach ($this->uploadFiles($revision) as $file) {
-            //do nothing
+    public function uploadRevision(string $revision = 'HEAD') {
+        while ($this->uploadFiles($revision)->valid()) {
+            $this->uploadFiles($revision)->next();
         }
     }
 
-    public function uploadFile($local, $remote)
+    public function uploadFile(string $local, string $remote)
     {
         if ($this->filesystem->has($remote)) {
             $content = $this->filesystem->read($local);
@@ -141,7 +133,7 @@ class Location
         }
     }
 
-    public function uploadFolder($folder)
+    public function uploadFolder(string $folder)
     {
         $new = '-' . substr(md5(microtime().rand(0,10000)), 0, 7);
         if ($this->filesystem->copy('local://' . $folder, 'remote://' . $folder.$new)) {
@@ -153,7 +145,7 @@ class Location
         }
     }
 
-    public function uploadNotCommitedFiles($files)
+    public function uploadNotCommitedFiles(array $files)
     {
         foreach ($files as $file) {
             $this->uploadFile('local://'.$file, 'remote://'.$file);
@@ -193,10 +185,23 @@ class Location
         }
     }
 
-    private function skip($file)
+    private function filter(array $diff):array
+    {
+        foreach ($diff as $status => $files) {
+            foreach ($files as $k => $file) {
+                if ($this->skip($file)) {
+                    unset($files[$k]);
+                }
+            }
+            $diff[$status] = array_filter($files);
+        }
+        return $diff;
+    }
+
+    private function skip(string $file):bool
     {
         foreach ($this->skipFilePatterns as $pattern) {
-            if (preg_match('#'.$pattern.'#', $file)) {
+            if (fnmatch($pattern, $file)) {
                 return true;
             }
         }
