@@ -14,6 +14,7 @@
       "Gut\\": "src/"
     }
   },
+  "bin": ["build/gut"],
   "require": {
     "php" : ">=7",
     "league/flysystem": "1.0.15",
